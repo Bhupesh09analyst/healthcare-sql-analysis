@@ -1,0 +1,102 @@
+CREATE TABLE healthcare (
+    patient_name VARCHAR(100),
+    age INT,
+    gender VARCHAR(10),
+    blood_type VARCHAR(5),
+    medical_condition VARCHAR(50),
+    date_of_admission DATE,
+    doctor_name VARCHAR(100),
+    hospital_name VARCHAR(150),
+    insurance_provider VARCHAR(50),
+    billing_amount DECIMAL(10,2),
+    room_number INT,
+    admission_type VARCHAR(20),
+    discharge_date DATE,
+    medication VARCHAR(50),
+    test_results VARCHAR(20)
+);
+
+# total billing revenue
+SELECT 
+    SUM(billing_amount) AS total_billing_revenue
+FROM healthcare;
+#total number of admissions
+
+select count(*) from healthcare;
+#average billing amount per patient admission
+
+select avg(billing_amount) as avg_revenue from healthcare;
+#'25539.316075'
+#admission type (Emergency, Urgent, Elective)
+select admission_type, count(*) from healthcare
+group by admission_type;
+#gender distribution
+select gender,count(*) from healthcare
+group by gender;
+
+#Which medical conditions generate the highest total billing amount
+select medical_condition,sum(billing_amount) as total_amt from healthcare
+group by medical_condition 
+order by total_amt;
+
+#average length of stay for patients by admission type
+select admission_type,avg(datediff(discharge_date,date_of_admission)) as avg_length
+from healthcare
+
+group by admission_type
+order by avg_length;
+
+#Which insurance providers contribute the most to hospital revenue
+
+select insurance_provider,sum(billing_amount) as total_amt
+from healthcare
+group by insurance_provider
+limit 1;
+#Which hospitals have the highest patient inflow?
+
+select hospital_name,sum(billing_amount)as total_bill from healthcare
+group by hospital_name
+order by sum(billing_amount) desc
+limit 10;
+# month over month analysis
+WITH monthly_revenue AS (SELECT DATE_FORMAT(date_of_admission, '%Y-%m') AS month,
+	SUM(billing_amount) AS revenue
+    FROM healthcare
+    GROUP BY DATE_FORMAT(date_of_admission, '%Y-%m')),
+
+mom_calc AS (SELECT month,revenue,
+	LAG(revenue) OVER (ORDER BY month) AS prev_month_revenue
+    FROM monthly_revenue)
+
+SELECT month,revenue,prev_month_revenue,
+    ROUND(
+        ((revenue - prev_month_revenue) / prev_month_revenue) * 100,2) AS mom_growth_percentage,
+    CASE WHEN prev_month_revenue IS NULL THEN 'N/A'
+        WHEN revenue > prev_month_revenue THEN 'Growth'
+        WHEN revenue < prev_month_revenue THEN 'Decline'
+        ELSE 'Stable' END AS performance_status
+FROM mom_calc;
+
+# Which doctors generate the highest revenue within each hospital?
+
+WITH doctor_revenue AS (SELECT hospital_name,doctor_name,
+	SUM(billing_amount) AS total_revenue
+    FROM healthcare
+    GROUP BY hospital_name, doctor_name),
+ranked_doctors AS (SELECT hospital_name,doctor_name,total_revenue,
+        RANK() OVER (PARTITION BY hospital_name
+            ORDER BY total_revenue DESC) AS doctor_rank
+FROM doctor_revenue)
+SELECT * FROM ranked_doctors
+WHERE doctor_rank <= 3;
+
+
+
+ 
+
+
+
+
+
+
+

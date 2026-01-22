@@ -1,0 +1,4 @@
+admission_type,count(*)
+Urgent,18576
+Emergency,18269
+Elective,18655
